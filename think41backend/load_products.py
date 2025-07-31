@@ -1,51 +1,47 @@
 import sqlite3
 import csv
 
-# Connect to SQLite DB (or create it)
+# Connect to SQLite DB
 conn = sqlite3.connect('products.db')
 cursor = conn.cursor()
 
-# Step 1: Create table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY,
-        cost REAL,
-        category TEXT,
-        name TEXT,
-        brand TEXT,
-        retail_price REAL,
-        department TEXT,
-        sku TEXT,
-        distribution_center_id INTEGER
-    )
-''')
+# ✅ Load all departments into a lookup map
+cursor.execute("SELECT name, id FROM departments")
+dept_map = {name: id for name, id in cursor.fetchall()}
 
-# Step 2: Load CSV
+# ✅ Read CSV and process
 with open('data/products.csv', 'r', encoding='utf-8') as csvfile:
     reader = csv.DictReader(csvfile)
-    rows = [
-        (
+    for row in reader:
+        dept_name = row['department']
+
+        # ✅ Insert department if not already added
+        if dept_name not in dept_map:
+            cursor.execute("INSERT OR IGNORE INTO departments (name) VALUES (?)", (dept_name,))
+            conn.commit()
+            cursor.execute("SELECT id FROM departments WHERE name = ?", (dept_name,))
+            dept_id = cursor.fetchone()[0]
+            dept_map[dept_name] = dept_id
+        else:
+            dept_id = dept_map[dept_name]
+
+        # ✅ Insert product with department_id
+        cursor.execute('''
+            INSERT OR REPLACE INTO products (
+                id, cost, category, name, brand, retail_price, sku, distribution_center_id, department_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
             int(row['id']),
             float(row['cost']),
             row['category'],
             row['name'],
             row['brand'],
             float(row['retail_price']),
-            row['department'],
             row['sku'],
-            int(row['distribution_center_id'])
-        )
-        for row in reader
-    ]
-
-# Step 3: Insert into table
-cursor.executemany('''
-    INSERT INTO products (
-        id, cost, category, name, brand, retail_price, department, sku, distribution_center_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-''', rows)
+            int(row['distribution_center_id']),
+            dept_id
+        ))
 
 conn.commit()
 conn.close()
-
-print("✅ products.csv loaded successfully!")
+print("✅ products.csv loaded with departments successfully!")
