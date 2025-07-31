@@ -1,0 +1,10 @@
+# Ignore Maven build
+target/
+*.log
+
+# Ignore Node modules
+think41frontend/node_modules/
+
+# Ignore IntelliJ or VS Code settings
+.idea/
+.vscode/
