@@ -3,7 +3,7 @@ from flask_cors import CORS
 from db_utils import get_db_connection
 
 app = Flask(__name__)
-CORS(app)  # Correct placement
+CORS(app)  # Allow requests from frontend (localhost:3000)
 
 @app.route('/api/products', methods=['GET'])
 def get_all_products():
